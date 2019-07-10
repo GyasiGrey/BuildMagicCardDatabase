@@ -42,13 +42,25 @@ namespace BuildMagicCardDatabase
                         HtmlDocument doc = web.Load(GathererURL);
 
                         HtmlNodeCollection ratingCollection = doc.DocumentNode.SelectNodes("//span[@class='textRatingValue']");
+                        HtmlNodeCollection ratingNumVotes = doc.DocumentNode.SelectNodes("//span[@class='totalVotesValue']");
 
-                        if(ratingCollection.Count > 0)
+                        //If there are 0 votes, set rating to NULL
+                        if (ratingNumVotes.Count > 0)
                         {
-                            float ratingTmp;
-                            if(float.TryParse(ratingCollection[0].InnerText, out ratingTmp))
+                            int numVotesTmp;
+                            if (int.TryParse(ratingNumVotes[0].InnerText, out numVotesTmp))
                             {
-                                rating = ratingTmp;
+                                if (numVotesTmp > 0)
+                                {
+                                    if (ratingCollection.Count > 0)
+                                    {
+                                        float ratingTmp;
+                                        if (float.TryParse(ratingCollection[0].InnerText, out ratingTmp))
+                                        {
+                                            rating = ratingTmp;
+                                        }
+                                    }
+                                }
                             }
                         }
 
