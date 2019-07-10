@@ -28,6 +28,11 @@ namespace BuildMagicCardDatabase
             {
                 var value = result.Value;
 
+                if(PageNum > result.PagingInfo.TotalPages)
+                {
+                    break;
+                }
+
                 foreach(Card c in value)
                 {
                     //If the MultiverseId is NULL that means the card is not on Gatherer.
