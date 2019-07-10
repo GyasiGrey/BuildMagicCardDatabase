@@ -1,4 +1,5 @@
 ﻿using AccessLayer;
+using HtmlAgilityPack;
 using MtgApiManager.Lib.Core;
 using MtgApiManager.Lib.Model;
 using MtgApiManager.Lib.Service;
@@ -16,6 +17,8 @@ namespace BuildMagicCardDatabase
         {
             Database db = new Database();
 
+            db.nonquery("TRUNCATE TABLE Cards");
+
             int PageNum = 1;
             CardService service = new CardService();
             Console.WriteLine("Getting Page " + PageNum);
@@ -31,6 +34,24 @@ namespace BuildMagicCardDatabase
                     //This only happens with a small number of reprint sets so it won't matter for this project
                     if (c.MultiverseId != null)
                     {
+                        float? rating = null;
+
+                        //Scrape the rating off Gatherer
+                        string GathererURL = String.Format("https://gatherer.wizards.com/pages/card/Details.aspx?multiverseid={0}", c.MultiverseId);
+                        HtmlWeb web = new HtmlWeb();
+                        HtmlDocument doc = web.Load(GathererURL);
+
+                        HtmlNodeCollection ratingCollection = doc.DocumentNode.SelectNodes("//span[@class='textRatingValue']");
+
+                        if(ratingCollection.Count > 0)
+                        {
+                            float ratingTmp;
+                            if(float.TryParse(ratingCollection[0].InnerText, out ratingTmp))
+                            {
+                                rating = ratingTmp;
+                            }
+                        }
+
                         DBParameter[] parameters = new DBParameter[]
                         {
                             new DBParameter()
@@ -74,11 +95,17 @@ namespace BuildMagicCardDatabase
                                 name = "@MultiverseId",
                                 type = System.Data.SqlDbType.Int,
                                 value = c.MultiverseId
+                            },
+                            new DBParameter()
+                            {
+                                name = "@Rating",
+                                type = System.Data.SqlDbType.Decimal,
+                                value = rating
                             }
                         };
 
                         Console.WriteLine("Inserting " + c.Name);
-                        db.nonquery("INSERT INTO Cards (Name, RulesText, CMC, Power, Toughness, Type, MultiverseId) VALUES (@Name, @RulesText, @CMC, @Power, @Toughness, @Type, @MultiverseId)", parameters);
+                        db.nonquery("INSERT INTO Cards (Name, RulesText, CMC, Power, Toughness, Type, MultiverseId, Rating) VALUES (@Name, @RulesText, @CMC, @Power, @Toughness, @Type, @MultiverseId, @Rating)", parameters);
                     }
                 }
 
