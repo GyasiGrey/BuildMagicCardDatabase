@@ -63,32 +63,34 @@ namespace AccessLayer
 
             using (connection)
             {
-                SqlCommand command = new SqlCommand(SQL, connection);
-                foreach (DBParameter p in parameters)
+                using(SqlCommand command = new SqlCommand(SQL, connection))
                 {
-                    command.Parameters.Add(p.name, p.type);
-                    if (p.value == null)
+                    foreach (DBParameter p in parameters)
                     {
-                        command.Parameters[p.name].Value = DBNull.Value;
-                    }
-                    else
-                    {
-                        command.Parameters[p.name].Value = p.value;
+                        command.Parameters.Add(p.name, p.type);
+                        if (p.value == null)
+                        {
+                            command.Parameters[p.name].Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            command.Parameters[p.name].Value = p.value;
+                        }
+
+                        if (p.output)
+                        {
+                            command.Parameters[p.name].Direction = ParameterDirection.InputOutput;
+                        }
                     }
 
-                    if (p.output)
-                    {
-                        command.Parameters[p.name].Direction = ParameterDirection.InputOutput;
-                    }
-                }
+                    command.ExecuteNonQuery();
 
-                command.ExecuteNonQuery();
-
-                foreach(DBParameter p in parameters)
-                {
-                    if(p.output)
+                    foreach(DBParameter p in parameters)
                     {
-                        p.value = command.Parameters[p.name].Value;
+                        if(p.output)
+                        {
+                            p.value = command.Parameters[p.name].Value;
+                        }
                     }
                 }
             }
@@ -133,78 +135,80 @@ namespace AccessLayer
 
             using (connection)
             {
-                SqlCommand command = new SqlCommand(SQL, connection);
-                foreach (DBParameter p in parameters)
+                using(SqlCommand command = new SqlCommand(SQL, connection))
                 {
-                    if (p.isCSV)
+                    foreach (DBParameter p in parameters)
                     {
-                        //This parameter is a CSV (e.g. WHERE IN (x,y,z))
-                        //Each value in the where statement needs to be a parameter
-                        string[] tokens = ((string)p.value).Split(',');
-                        int i = 0;
-
-                        //Add the each token as a parameter
-                        foreach(string t in tokens)
+                        if (p.isCSV)
                         {
-                            command.Parameters.Add(p.name + i, p.csvType);
+                            //This parameter is a CSV (e.g. WHERE IN (x,y,z))
+                            //Each value in the where statement needs to be a parameter
+                            string[] tokens = ((string)p.value).Split(',');
+                            int i = 0;
 
-                            if (t == null)
+                            //Add the each token as a parameter
+                            foreach(string t in tokens)
                             {
-                                command.Parameters[p.name + i].Value = DBNull.Value;
-                            }
-                            else
-                            {
-                                command.Parameters[p.name + i].Value = t;
-                            }
+                                command.Parameters.Add(p.name + i, p.csvType);
 
-                            i++;
-                        }
-                    }
-                    else
-                    {
-                        command.Parameters.Add(p.name, p.type);
+                                if (t == null)
+                                {
+                                    command.Parameters[p.name + i].Value = DBNull.Value;
+                                }
+                                else
+                                {
+                                    command.Parameters[p.name + i].Value = t;
+                                }
 
-                        if (p.value == null)
-                        {
-                            command.Parameters[p.name].Value = DBNull.Value;
+                                i++;
+                            }
                         }
                         else
                         {
-                            command.Parameters[p.name].Value = p.value;
-                        }
+                            command.Parameters.Add(p.name, p.type);
 
-                        if (p.output)
-                        {
-                            command.Parameters[p.name].Direction = ParameterDirection.InputOutput;
+                            if (p.value == null)
+                            {
+                                command.Parameters[p.name].Value = DBNull.Value;
+                            }
+                            else
+                            {
+                                command.Parameters[p.name].Value = p.value;
+                            }
+
+                            if (p.output)
+                            {
+                                command.Parameters[p.name].Direction = ParameterDirection.InputOutput;
+                            }
                         }
                     }
-                }
 
-                using(SqlDataReader reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
+                    using(SqlDataReader reader = command.ExecuteReader())
                     {
-                        int len = reader.FieldCount;
-                        List<DBParameter> output = new List<DBParameter>();
-
-                        for (int i = 0; i < len; i++)
+                        while (reader.Read())
                         {
-                            DBParameter p = new DBParameter();
+                            int len = reader.FieldCount;
+                            List<DBParameter> output = new List<DBParameter>();
 
-                            p.value = reader.GetValue(i);
-                            p.name = reader.GetName(i);
+                            for (int i = 0; i < len; i++)
+                            {
+                                DBParameter p = new DBParameter();
 
-                            output.Add(p);
+                                p.value = reader.GetValue(i);
+                                p.name = reader.GetName(i);
+
+                                output.Add(p);
+                            }
+
+                            totalOutput.Add(output);
                         }
 
-                        totalOutput.Add(output);
-                    }
-
-                    foreach (DBParameter p in parameters)
-                    {
-                        if (p.output)
+                        foreach (DBParameter p in parameters)
                         {
-                            p.value = command.Parameters[p.name].Value;
+                            if (p.output)
+                            {
+                                p.value = command.Parameters[p.name].Value;
+                            }
                         }
                     }
                 }
