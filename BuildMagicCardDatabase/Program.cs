@@ -81,7 +81,7 @@ namespace BuildMagicCardDatabase
                             {
                                 name = "@RulesText",
                                 type = System.Data.SqlDbType.VarChar,
-                                value = c.Text
+                                value = c.Text.Replace("\n", " ")
                             },
                             new DBParameter()
                             {
